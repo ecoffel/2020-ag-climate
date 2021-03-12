@@ -44,17 +44,18 @@ useTrendMethod = True
 
 uncertaintyProp = True
 
-n_samples = 50
-n_bootstraps = 200
+useDeepak = False
+
+includeKdd = False
+
+n_samples = 100
+n_bootstraps = 100
 
 yearRange = [1981, 2019]
 
-minCropYears = 10
-minCropYearsDeepak = 10
+minCropYears = 30
 
-rebuild=False
-
-if os.path.isfile('%s/us-county-yield-gdd-kdd-%s-%s'%(dataDirDiscovery, crop, wxData)) and not rebuild:
+if os.path.isfile('%s/us-county-yield-gdd-kdd-%s-%s'%(dataDirDiscovery, crop, wxData)):
     usCounties = pd.read_pickle('%s/us-county-yield-gdd-kdd-%s-%s'%(dataDirDiscovery, crop, wxData))
 
 usCounties = usCounties.drop(columns=['CWA', 'TIME_ZONE', 'FE_AREA'])
@@ -84,20 +85,6 @@ countySoybeanYield = np.array(list(usCounties['soybeanYield']))
 countySoybeanYieldDetrendAnom = np.array(list(usCounties['soybeanYieldDetrend']))
 
 countyTotalProd = np.array([y*a for y,a in zip(countyMaizeYield, countyMaizeHaAc)] + [y*a for y,a in zip(countySoybeanYield, countySoybeanHaAc)])
-
-
-# CURRENT VERSION - 2020-09-02
-
-from sklearn.preprocessing import normalize
-
-curCountyList = usCounties.copy()
-
-useDeepak = False
-
-uncertaintyProp = False
-
-n_bootstraps = 1
-sample_x = np.linspace(0.05, .95, 4)
 
 adjustForHarvestedArea = False
 
@@ -131,12 +118,12 @@ haSoybeanMeanAllAc = np.array([np.nanmean(a) for a in usCounties['soybeanHarvest
 haTotalAllAc = haMaizeMeanAllAc + haSoybeanMeanAllAc
 haTotalFracAll = haTotalAllAc/countyAcAll
 
-countySeasonLenSec = np.array(list(curCountyList['seasonalSeconds']))
+countySeasonLenSec = np.array(list(usCounties['seasonalSeconds']))
 
 if useDeepak:
-    countyYieldDetrend = np.array(list(curCountyList['maizeYieldDetrendPlusMeanDeepak'])) 
-    countyYield = np.array(list(curCountyList['maizeYieldDeepak']))
-    countyYieldDetrendAnom = np.array(list(curCountyList['maizeYieldDetrendDeepak']))
+    countyYieldDetrend = np.array(list(usCounties['maizeYieldDetrendPlusMeanDeepak'])) 
+    countyYield = np.array(list(usCounties['maizeYieldDeepak']))
+    countyYieldDetrendAnom = np.array(list(usCounties['maizeYieldDetrendDeepak']))
 else:
     countyMaizeHaAc = np.array([a for a in np.array(list(usCounties['maizeHarvestedArea']))])
     countyMaizeHaMeanAc = np.array([np.nanmean(a) for a in np.array(list(usCounties['maizeHarvestedArea']))])
@@ -145,11 +132,11 @@ else:
     countySoybeanHaMeanAc = np.array([np.nanmean(a) for a in np.array(list(usCounties['soybeanHarvestedArea']))])
     countySoybeanHaFrac = np.array([a for a in np.array(list(usCounties['soybeanHarvestedAreaFraction']))])*100
 
-    countyMaizeYield = np.array(list(curCountyList['maizeYield']))
-    countyMaizeYieldDetrendAnom = np.array(list(curCountyList['maizeYieldDetrend']))
+    countyMaizeYield = np.array(list(usCounties['maizeYield']))
+    countyMaizeYieldDetrendAnom = np.array(list(usCounties['maizeYieldDetrend']))
 
-    countySoybeanYield = np.array(list(curCountyList['soybeanYield']))
-    countySoybeanYieldDetrendAnom = np.array(list(curCountyList['soybeanYieldDetrend']))
+    countySoybeanYield = np.array(list(usCounties['soybeanYield']))
+    countySoybeanYieldDetrendAnom = np.array(list(usCounties['soybeanYieldDetrend']))
 
     countyTotalProd = np.full(countySoybeanYield.shape, np.nan)
     for c in range(countyTotalProd.shape[0]):
@@ -162,17 +149,17 @@ countyIr = np.array(list(usCounties['maizeCountyIrrigationFraction']))
 countyState = np.array(list(usCounties['STATE']))
 countyFips = np.array(list(usCounties['FIPS']))
 
-countyPr = np.array(list(curCountyList['seasonalPrecip']))  # mm
+countyPr = np.array(list(usCounties['seasonalPrecip']))  # mm
 if wxData == 'era5':
-    countyT = np.array(list(curCountyList['seasonalT']))  # growing season mean monthly temperature
-countyKdd = np.array(list(curCountyList['kdd']))
-countyGdd = np.array(list(curCountyList['gdd']))
+    countyT = np.array(list(usCounties['seasonalT']))  # growing season mean monthly temperature
+countyKdd = np.array(list(usCounties['kdd']))
+countyGdd = np.array(list(usCounties['gdd']))
 
-# now these are in w/m2
-countySlhf = -np.array(list(curCountyList['seasonalSlhf']))
-countySshf = -np.array(list(curCountyList['seasonalSshf']))
-countySsr = np.array(list(curCountyList['seasonalSsr']))
-countyStr = np.array(list(curCountyList['seasonalStr']))
+# now these are in J/growing season/m2
+countySlhf = -np.array(list(usCounties['seasonalSlhf']))
+countySshf = -np.array(list(usCounties['seasonalSshf']))
+countySsr = np.array(list(usCounties['seasonalSsr']))
+countyStr = np.array(list(usCounties['seasonalStr']))
 
 if wxData == 'era5':
     # convert from J/growing season/m2 to W/m2
@@ -182,8 +169,8 @@ if wxData == 'era5':
     countyStr /= np.matlib.repmat(countySeasonLenSec, 39, 1).T
 
 countyNetRad = (countySsr+countyStr)
-countyU10 = np.array(list(curCountyList['seasonalU10']))
-countyV10 = np.array(list(curCountyList['seasonalV10']))
+countyU10 = np.array(list(usCounties['seasonalU10']))
+countyV10 = np.array(list(usCounties['seasonalV10']))
 
 if wxData == 'era5':
     countyT_Norm = normWithNan(countyT)
@@ -202,189 +189,189 @@ countyTotalProd_Norm = normWithNan(countyTotalProd)
 NCounties = countyKdd.shape[0]
 NYears = countyKdd.shape[1]
 
-maizeYieldFromFeedback_SensTest = np.full([NCounties, len(sample_x), n_bootstraps, len(areaLimit)], np.nan)
-soybeanYieldFromFeedback_SensTest = np.full([NCounties, len(sample_x), n_bootstraps, len(areaLimit)], np.nan)
+maizeYieldFromFeedback_SensTest = np.full([NCounties, n_samples, n_bootstraps, len(areaLimit)], np.nan)
+soybeanYieldFromFeedback_SensTest = np.full([NCounties, n_samples, n_bootstraps, len(areaLimit)], np.nan)
 
 for a, curAreaLimit in enumerate(areaLimit):
     
     if len(areaLimit) > 1:
         print('area limit %d%%'%curAreaLimit)
 
-    lhTrendFrac = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    shTrendFrac = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    lhFromFeedback = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    shFromFeedback = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
+    lhTrendFrac = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    shTrendFrac = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    lhFromFeedback = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    shFromFeedback = np.full([NCounties, n_samples, n_bootstraps], np.nan)
     if wxData == 'era5':
-        tFromFeedback = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    kddTrendFrac = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    kddFromFeedback = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    gddTrendFrac = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    gddFromFeedback = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    maizeYieldTrendFrac = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    maizeYieldFromFeedback = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    soybeanYieldTrendFrac = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    soybeanYieldFromFeedback = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    prodFromFeedback = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
+        tFromFeedback = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    kddTrendFrac = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    kddFromFeedback = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    gddTrendFrac = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    gddFromFeedback = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    maizeYieldTrendFrac = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    maizeYieldFromFeedback = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    soybeanYieldTrendFrac = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    soybeanYieldFromFeedback = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    prodFromFeedback = np.full([NCounties, n_samples, n_bootstraps], np.nan)
 
-    maizeYieldChgFeedbackWithAgInt = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    maizeYieldChgFeedbackWithoutAgInt = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
+    maizeYieldChgFeedbackWithAgInt = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    maizeYieldChgFeedbackWithoutAgInt = np.full([NCounties, n_samples, n_bootstraps], np.nan)
 
-    soybeanYieldChgFeedbackWithAgInt = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    soybeanYieldChgFeedbackWithoutAgInt = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
+    soybeanYieldChgFeedbackWithAgInt = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    soybeanYieldChgFeedbackWithoutAgInt = np.full([NCounties, n_samples, n_bootstraps], np.nan)
 
-    lhChgFeedbackWithAgInt = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    lhChgFeedbackWithoutAgInt = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
+    lhChgFeedbackWithAgInt = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    lhChgFeedbackWithoutAgInt = np.full([NCounties, n_samples, n_bootstraps], np.nan)
 
-    shChgFeedbackWithAgInt = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    shChgFeedbackWithoutAgInt = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
+    shChgFeedbackWithAgInt = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    shChgFeedbackWithoutAgInt = np.full([NCounties, n_samples, n_bootstraps], np.nan)
 
-    kddChgFeedbackWithAgInt = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    kddChgFeedbackWithoutAgInt = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
+    kddChgFeedbackWithAgInt = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    kddChgFeedbackWithoutAgInt = np.full([NCounties, n_samples, n_bootstraps], np.nan)
 
-    gddChgFeedbackWithAgInt = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    gddChgFeedbackWithoutAgInt = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
+    gddChgFeedbackWithAgInt = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    gddChgFeedbackWithoutAgInt = np.full([NCounties, n_samples, n_bootstraps], np.nan)
 
     lhObsTrend = np.full([NCounties], np.nan)
     shObsTrend = np.full([NCounties], np.nan)
     netRadObsTrend = np.full([NCounties], np.nan)
 
-    lhMod_yieldGrowth = np.full([NCounties, NYears, len(sample_x), n_bootstraps], np.nan)
-    lhMod_noYieldGrowth = np.full([NCounties, NYears, len(sample_x), n_bootstraps], np.nan)
-    lhModTrend_yieldGrowth = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    lhModTrend_noYieldGrowth = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
+    lhMod_yieldGrowth = np.full([NCounties, NYears, n_samples, n_bootstraps], np.nan)
+    lhMod_noYieldGrowth = np.full([NCounties, NYears, n_samples, n_bootstraps], np.nan)
+    lhModTrend_yieldGrowth = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    lhModTrend_noYieldGrowth = np.full([NCounties, n_samples, n_bootstraps], np.nan)
 
-    shMod_yieldGrowth = np.full([NCounties, NYears, len(sample_x), n_bootstraps], np.nan)
-    shMod_noYieldGrowth = np.full([NCounties, NYears, len(sample_x), n_bootstraps], np.nan)
-    shModTrend_yieldGrowth = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    shModTrend_noYieldGrowth = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
+    shMod_yieldGrowth = np.full([NCounties, NYears, n_samples, n_bootstraps], np.nan)
+    shMod_noYieldGrowth = np.full([NCounties, NYears, n_samples, n_bootstraps], np.nan)
+    shModTrend_yieldGrowth = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    shModTrend_noYieldGrowth = np.full([NCounties, n_samples, n_bootstraps], np.nan)
 
     if wxData == 'era5':
-        tMod_yieldGrowth = np.full([NCounties, NYears, len(sample_x), n_bootstraps], np.nan)
-        tMod_noYieldGrowth = np.full([NCounties, NYears, len(sample_x), n_bootstraps], np.nan)
-        tModTrend_yieldGrowth = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-        tModTrend_noYieldGrowth = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
+        tMod_yieldGrowth = np.full([NCounties, NYears, n_samples, n_bootstraps], np.nan)
+        tMod_noYieldGrowth = np.full([NCounties, NYears, n_samples, n_bootstraps], np.nan)
+        tModTrend_yieldGrowth = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+        tModTrend_noYieldGrowth = np.full([NCounties, n_samples, n_bootstraps], np.nan)
     
-    gddMod_yieldGrowth = np.full([NCounties, NYears, len(sample_x), n_bootstraps], np.nan)
-    gddMod_noYieldGrowth = np.full([NCounties, NYears, len(sample_x), n_bootstraps], np.nan)
-    gddModTrend_yieldGrowth = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    gddModTrend_noYieldGrowth = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
+    gddMod_yieldGrowth = np.full([NCounties, NYears, n_samples, n_bootstraps], np.nan)
+    gddMod_noYieldGrowth = np.full([NCounties, NYears, n_samples, n_bootstraps], np.nan)
+    gddModTrend_yieldGrowth = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    gddModTrend_noYieldGrowth = np.full([NCounties, n_samples, n_bootstraps], np.nan)
 
-    kddMod_yieldGrowth = np.full([NCounties, NYears, len(sample_x), n_bootstraps], np.nan)
-    kddMod_noYieldGrowth = np.full([NCounties, NYears, len(sample_x), n_bootstraps], np.nan)
-    kddModTrend_yieldGrowth = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    kddModTrend_noYieldGrowth = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
+    kddMod_yieldGrowth = np.full([NCounties, NYears, n_samples, n_bootstraps], np.nan)
+    kddMod_noYieldGrowth = np.full([NCounties, NYears, n_samples, n_bootstraps], np.nan)
+    kddModTrend_yieldGrowth = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    kddModTrend_noYieldGrowth = np.full([NCounties, n_samples, n_bootstraps], np.nan)
 
-    maizeYieldMod_yieldGrowth = np.full([NCounties, NYears, len(sample_x), n_bootstraps], np.nan)
-    maizeYieldMod_noYieldGrowth = np.full([NCounties, NYears, len(sample_x), n_bootstraps], np.nan)
-    maizeYieldModTrend_yieldGrowth = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    maizeYieldModTrend_noYieldGrowth = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
+    maizeYieldMod_yieldGrowth = np.full([NCounties, NYears, n_samples, n_bootstraps], np.nan)
+    maizeYieldMod_noYieldGrowth = np.full([NCounties, NYears, n_samples, n_bootstraps], np.nan)
+    maizeYieldModTrend_yieldGrowth = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    maizeYieldModTrend_noYieldGrowth = np.full([NCounties, n_samples, n_bootstraps], np.nan)
 
-    soybeanYieldMod_yieldGrowth = np.full([NCounties, NYears, len(sample_x), n_bootstraps], np.nan)
-    soybeanYieldMod_noYieldGrowth = np.full([NCounties, NYears, len(sample_x), n_bootstraps], np.nan)
-    soybeanYieldModTrend_yieldGrowth = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
-    soybeanYieldModTrend_noYieldGrowth = np.full([NCounties, len(sample_x), n_bootstraps], np.nan)
+    soybeanYieldMod_yieldGrowth = np.full([NCounties, NYears, n_samples, n_bootstraps], np.nan)
+    soybeanYieldMod_noYieldGrowth = np.full([NCounties, NYears, n_samples, n_bootstraps], np.nan)
+    soybeanYieldModTrend_yieldGrowth = np.full([NCounties, n_samples, n_bootstraps], np.nan)
+    soybeanYieldModTrend_noYieldGrowth = np.full([NCounties, n_samples, n_bootstraps], np.nan)
 
-    mdl_Param_Corr = {'Prod-Pr':np.full([NCounties], np.nan), 
-                        'Prod-NetRad':np.full([NCounties], np.nan), 
-                      'Prod-Wind':np.full([NCounties], np.nan), 
-                      'Pr-NetRad':np.full([NCounties], np.nan), 
-                      'Pr-Wind':np.full([NCounties], np.nan), 
-                      'NetRad-Wind':np.full([NCounties], np.nan)}
+    mdl_Param_Corr = {'Prod-Pr':np.full([NCounties, n_bootstraps], np.nan), 
+                        'Prod-NetRad':np.full([NCounties, n_bootstraps], np.nan), 
+                      'Prod-Wind':np.full([NCounties, n_bootstraps], np.nan), 
+                      'Pr-NetRad':np.full([NCounties, n_bootstraps], np.nan), 
+                      'Pr-Wind':np.full([NCounties, n_bootstraps], np.nan), 
+                      'NetRad-Wind':np.full([NCounties, n_bootstraps], np.nan)}
 
-    mdl_LH_Y_Coefs = {'MaizeYield_DetrendAnom':np.full([NCounties], np.nan), 
-                      'SoybeanYield_DetrendAnom':np.full([NCounties], np.nan), 
-                      'TotalProd_DetrendAnom':np.full([NCounties], np.nan), 
-                           'Pr_DetrendAnom':np.full([NCounties], np.nan),
-                           'NetRad_DetrendAnom':np.full([NCounties], np.nan),
-                           'Wind_DetrendAnom':np.full([NCounties], np.nan), 
-                         'R2':np.full([NCounties], np.nan)}
-    mdl_LH_Y_PValues = {'MaizeYield_DetrendAnom':np.full([NCounties], np.nan), 
-                        'SoybeanYield_DetrendAnom':np.full([NCounties], np.nan), 
-                        'TotalProd_DetrendAnom':np.full([NCounties], np.nan), 
-                           'Pr_DetrendAnom':np.full([NCounties], np.nan),
-                           'NetRad_DetrendAnom':np.full([NCounties], np.nan),
-                           'Wind_DetrendAnom':np.full([NCounties], np.nan)}
+    mdl_LH_Y_Coefs = {'MaizeYield_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan), 
+                      'SoybeanYield_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan), 
+                      'TotalProd_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan), 
+                           'Pr_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan),
+                           'NetRad_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan),
+                           'Wind_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan), 
+                         'R2':np.full([NCounties, n_bootstraps], np.nan)}
+    mdl_LH_Y_PValues = {'MaizeYield_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan), 
+                        'SoybeanYield_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan), 
+                        'TotalProd_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan), 
+                           'Pr_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan),
+                           'NetRad_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan),
+                           'Wind_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan)}
     
 
-    mdl_LH_Y_Norm_Coefs = {'MaizeYield_DetrendAnom_Norm':np.full([NCounties], np.nan), 
-                           'SoybeanYield_DetrendAnom_Norm':np.full([NCounties], np.nan), 
-                           'TotalProd_DetrendAnom_Norm':np.full([NCounties], np.nan), 
-                           'Pr_DetrendAnom_Norm':np.full([NCounties], np.nan),
-                           'NetRad_DetrendAnom_Norm':np.full([NCounties], np.nan),
-                           'Wind_DetrendAnom_Norm':np.full([NCounties], np.nan)}
-    mdl_LH_Y_Norm_PValues = {'MaizeYield_DetrendAnom_Norm':np.full([NCounties], np.nan), 
-                             'SoybeanYield_DetrendAnom_Norm':np.full([NCounties], np.nan), 
-                             'TotalProd_DetrendAnom_Norm':np.full([NCounties], np.nan), 
-                           'Pr_DetrendAnom_Norm':np.full([NCounties], np.nan),
-                           'NetRad_DetrendAnom_Norm':np.full([NCounties], np.nan),
-                           'Wind_DetrendAnom_Norm':np.full([NCounties], np.nan)}
+    mdl_LH_Y_Norm_Coefs = {'MaizeYield_DetrendAnom_Norm':np.full([NCounties, n_bootstraps], np.nan), 
+                           'SoybeanYield_DetrendAnom_Norm':np.full([NCounties, n_bootstraps], np.nan), 
+                           'TotalProd_DetrendAnom_Norm':np.full([NCounties, n_bootstraps], np.nan), 
+                           'Pr_DetrendAnom_Norm':np.full([NCounties, n_bootstraps], np.nan),
+                           'NetRad_DetrendAnom_Norm':np.full([NCounties, n_bootstraps], np.nan),
+                           'Wind_DetrendAnom_Norm':np.full([NCounties, n_bootstraps], np.nan)}
+    mdl_LH_Y_Norm_PValues = {'MaizeYield_DetrendAnom_Norm':np.full([NCounties, n_bootstraps], np.nan), 
+                             'SoybeanYield_DetrendAnom_Norm':np.full([NCounties, n_bootstraps], np.nan), 
+                             'TotalProd_DetrendAnom_Norm':np.full([NCounties, n_bootstraps], np.nan), 
+                           'Pr_DetrendAnom_Norm':np.full([NCounties, n_bootstraps], np.nan),
+                           'NetRad_DetrendAnom_Norm':np.full([NCounties, n_bootstraps], np.nan),
+                           'Wind_DetrendAnom_Norm':np.full([NCounties, n_bootstraps], np.nan)}
 
-    mdl_LH_Y_Decomp_Coefs = {'TotalYield_DetrendAnom':np.full([NCounties], np.nan), 
-                              'TotalHA':np.full([NCounties], np.nan)}
-    mdl_LH_Y_Decomp_PValues = {'TotalYield_DetrendAnom':np.full([NCounties], np.nan), 
-                              'TotalHA':np.full([NCounties], np.nan)}
+    mdl_LH_Y_Decomp_Coefs = {'TotalYield_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan), 
+                              'TotalHA':np.full([NCounties, n_bootstraps], np.nan)}
+    mdl_LH_Y_Decomp_PValues = {'TotalYield_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan), 
+                              'TotalHA':np.full([NCounties, n_bootstraps], np.nan)}
 
-    mdl_LH_SH_Coefs = {'SLHF_DetrendAnom':np.full([NCounties], np.nan), 
-                           'NetRad_DetrendAnom':np.full([NCounties], np.nan),
-                          'R2':np.full([NCounties], np.nan)}
-    mdl_LH_SH_PValues = {'SLHF_DetrendAnom':np.full([NCounties], np.nan), 
-                           'NetRad_DetrendAnom':np.full([NCounties], np.nan)}
+    mdl_LH_SH_Coefs = {'SLHF_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan), 
+                           'NetRad_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan),
+                          'R2':np.full([NCounties, n_bootstraps], np.nan)}
+    mdl_LH_SH_PValues = {'SLHF_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan), 
+                           'NetRad_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan)}
 
-    mdl_LH_SH_Norm_Coefs = {'SLHF_DetrendAnom_Norm':np.full([NCounties], np.nan), 
-                           'NetRad_DetrendAnom_Norm':np.full([NCounties], np.nan)}
-    mdl_LH_SH_Norm_PValues = {'SLHF_DetrendAnom_Norm':np.full([NCounties], np.nan), 
-                           'NetRad_DetrendAnom_Norm':np.full([NCounties], np.nan)}
+    mdl_LH_SH_Norm_Coefs = {'SLHF_DetrendAnom_Norm':np.full([NCounties, n_bootstraps], np.nan), 
+                           'NetRad_DetrendAnom_Norm':np.full([NCounties, n_bootstraps], np.nan)}
+    mdl_LH_SH_Norm_PValues = {'SLHF_DetrendAnom_Norm':np.full([NCounties, n_bootstraps], np.nan), 
+                           'NetRad_DetrendAnom_Norm':np.full([NCounties, n_bootstraps], np.nan)}
 
-    mdl_SH_KDD_Coefs = {'SSHF_DetrendAnom':np.full([NCounties], np.nan),
-                       'R2':np.full([NCounties], np.nan)}
-    mdl_SH_KDD_PValues = {'SSHF_DetrendAnom':np.full([NCounties], np.nan)}
-    mdl_SH_GDD_Coefs = {'SSHF_DetrendAnom':np.full([NCounties], np.nan), 
-                       'R2':np.full([NCounties], np.nan)}
-    mdl_SH_GDD_PValues = {'SSHF_DetrendAnom':np.full([NCounties], np.nan)}
+    mdl_SH_KDD_Coefs = {'SSHF_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan),
+                       'R2':np.full([NCounties, n_bootstraps], np.nan)}
+    mdl_SH_KDD_PValues = {'SSHF_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan)}
+    mdl_SH_GDD_Coefs = {'SSHF_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan), 
+                       'R2':np.full([NCounties, n_bootstraps], np.nan)}
+    mdl_SH_GDD_PValues = {'SSHF_DetrendAnom':np.full([NCounties, n_bootstraps], np.nan)}
 
-    mdl_SH_KDD_Norm_Coefs = {'SSHF_DetrendAnom_Norm':np.full([NCounties], np.nan)}
-    mdl_SH_KDD_Norm_PValues = {'SSHF_DetrendAnom_Norm':np.full([NCounties], np.nan)}
-    mdl_SH_GDD_Norm_Coefs = {'SSHF_DetrendAnom_Norm':np.full([NCounties], np.nan)}
-    mdl_SH_GDD_Norm_PValues = {'SSHF_DetrendAnom_Norm':np.full([NCounties], np.nan)}
+    mdl_SH_KDD_Norm_Coefs = {'SSHF_DetrendAnom_Norm':np.full([NCounties, n_bootstraps], np.nan)}
+    mdl_SH_KDD_Norm_PValues = {'SSHF_DetrendAnom_Norm':np.full([NCounties, n_bootstraps], np.nan)}
+    mdl_SH_GDD_Norm_Coefs = {'SSHF_DetrendAnom_Norm':np.full([NCounties, n_bootstraps], np.nan)}
+    mdl_SH_GDD_Norm_PValues = {'SSHF_DetrendAnom_Norm':np.full([NCounties, n_bootstraps], np.nan)}
 
-    mdl_KDD_GDD_MaizeYield_Coefs = {'KDD_Detrend':np.full([NCounties], np.nan),
-                                    'GDD_Detrend':np.full([NCounties], np.nan), 
-                                    'Pr_Detrend':np.full([NCounties], np.nan),
-                                    'R2':np.full([NCounties], np.nan)}
-    mdl_KDD_GDD_MaizeYield_PValues = {'KDD_Detrend':np.full([NCounties], np.nan),
-                                      'GDD_Detrend':np.full([NCounties], np.nan), 
-                                      'Pr_Detrend':np.full([NCounties], np.nan)}
+    mdl_KDD_GDD_MaizeYield_Coefs = {'KDD_Detrend':np.full([NCounties, n_bootstraps], np.nan),
+                                    'GDD_Detrend':np.full([NCounties, n_bootstraps], np.nan), 
+                                    'Pr_Detrend':np.full([NCounties, n_bootstraps], np.nan),
+                                    'R2':np.full([NCounties, n_bootstraps], np.nan)}
+    mdl_KDD_GDD_MaizeYield_PValues = {'KDD_Detrend':np.full([NCounties, n_bootstraps], np.nan),
+                                      'GDD_Detrend':np.full([NCounties, n_bootstraps], np.nan), 
+                                      'Pr_Detrend':np.full([NCounties, n_bootstraps], np.nan)}
 
-    mdl_KDD_GDD_MaizeYield_Norm_Coefs = {'KDD_DetrendNorm':np.full([NCounties], np.nan),
-                                    'GDD_DetrendNorm':np.full([NCounties], np.nan), 
-                                    'Pr_DetrendNorm':np.full([NCounties], np.nan),
-                                    'R2':np.full([NCounties], np.nan)}
-    mdl_KDD_GDD_MaizeYield_Norm_PValues = {'KDD_DetrendNorm':np.full([NCounties], np.nan),
-                                      'GDD_DetrendNorm':np.full([NCounties], np.nan), 
-                                      'Pr_DetrendNorm':np.full([NCounties], np.nan)}
+    mdl_KDD_GDD_MaizeYield_Norm_Coefs = {'KDD_DetrendNorm':np.full([NCounties, n_bootstraps], np.nan),
+                                    'GDD_DetrendNorm':np.full([NCounties, n_bootstraps], np.nan), 
+                                    'Pr_DetrendNorm':np.full([NCounties, n_bootstraps], np.nan),
+                                    'R2':np.full([NCounties, n_bootstraps], np.nan)}
+    mdl_KDD_GDD_MaizeYield_Norm_PValues = {'KDD_DetrendNorm':np.full([NCounties, n_bootstraps], np.nan),
+                                      'GDD_DetrendNorm':np.full([NCounties, n_bootstraps], np.nan), 
+                                      'Pr_DetrendNorm':np.full([NCounties, n_bootstraps], np.nan)}
 
-    mdl_KDD_GDD_SoybeanYield_Coefs = {'KDD_Detrend':np.full([NCounties], np.nan),
-                                    'GDD_Detrend':np.full([NCounties], np.nan), 
-                                    'Pr_Detrend':np.full([NCounties], np.nan),
-                                    'R2':np.full([NCounties], np.nan)}
-    mdl_KDD_GDD_SoybeanYield_PValues = {'KDD_Detrend':np.full([NCounties], np.nan),
-                                      'GDD_Detrend':np.full([NCounties], np.nan), 
-                                      'Pr_Detrend':np.full([NCounties], np.nan)}
+    mdl_KDD_GDD_SoybeanYield_Coefs = {'KDD_Detrend':np.full([NCounties, n_bootstraps], np.nan),
+                                    'GDD_Detrend':np.full([NCounties, n_bootstraps], np.nan), 
+                                    'Pr_Detrend':np.full([NCounties, n_bootstraps], np.nan),
+                                    'R2':np.full([NCounties, n_bootstraps], np.nan)}
+    mdl_KDD_GDD_SoybeanYield_PValues = {'KDD_Detrend':np.full([NCounties, n_bootstraps], np.nan),
+                                      'GDD_Detrend':np.full([NCounties, n_bootstraps], np.nan), 
+                                      'Pr_Detrend':np.full([NCounties, n_bootstraps], np.nan)}
 
-    mdl_KDD_GDD_SoybeanYield_Norm_Coefs = {'KDD_DetrendNorm':np.full([NCounties], np.nan),
-                                    'GDD_DetrendNorm':np.full([NCounties], np.nan), 
-                                    'Pr_DetrendNorm':np.full([NCounties], np.nan),
-                                    'R2':np.full([NCounties], np.nan)}
-    mdl_KDD_GDD_SoybeanYield_Norm_PValues = {'KDD_DetrendNorm':np.full([NCounties], np.nan),
-                                      'GDD_DetrendNorm':np.full([NCounties], np.nan), 
-                                      'Pr_DetrendNorm':np.full([NCounties], np.nan)}
+    mdl_KDD_GDD_SoybeanYield_Norm_Coefs = {'KDD_DetrendNorm':np.full([NCounties, n_bootstraps], np.nan),
+                                    'GDD_DetrendNorm':np.full([NCounties, n_bootstraps], np.nan), 
+                                    'Pr_DetrendNorm':np.full([NCounties, n_bootstraps], np.nan),
+                                    'R2':np.full([NCounties, n_bootstraps], np.nan)}
+    mdl_KDD_GDD_SoybeanYield_Norm_PValues = {'KDD_DetrendNorm':np.full([NCounties, n_bootstraps], np.nan),
+                                      'GDD_DetrendNorm':np.full([NCounties, n_bootstraps], np.nan), 
+                                      'Pr_DetrendNorm':np.full([NCounties, n_bootstraps], np.nan)}
     
-    mdl_LH_Y_CondNum = np.full([NCounties, n_bootstrap], np.nan)
-    mdl_LH_SH_CondNum = np.full([NCounties, n_bootstrap], np.nan)
-    mdl_SH_KDD_CondNum = np.full([NCounties, n_bootstrap], np.nan)
-    mdl_SH_GDD_CondNum = np.full([NCounties, n_bootstrap], np.nan)
-    mdl_KDD_GDD_PR_MaizeYield_CondNum = np.full([NCounties, n_bootstrap], np.nan)
-    mdl_KDD_GDD_PR_SoybeanYield_CondNum = np.full([NCounties, n_bootstrap], np.nan)
+    mdl_LH_Y_CondNum = np.full([NCounties, n_bootstraps], np.nan)
+    mdl_LH_SH_CondNum = np.full([NCounties, n_bootstraps], np.nan)
+    mdl_SH_KDD_CondNum = np.full([NCounties, n_bootstraps], np.nan)
+    mdl_SH_GDD_CondNum = np.full([NCounties, n_bootstraps], np.nan)
+    mdl_KDD_GDD_PR_MaizeYield_CondNum = np.full([NCounties, n_bootstraps], np.nan)
+    mdl_KDD_GDD_PR_SoybeanYield_CondNum = np.full([NCounties, n_bootstraps], np.nan)
     
     fipsSel = []
     fipsAll = []
@@ -445,7 +432,7 @@ for a, curAreaLimit in enumerate(areaLimit):
 
         exclude = False
         # identify counties excluded bc they have a short production time series
-        if np.nansum(curTotalProd) == 0 or len(nnProd) < 30:
+        if np.nansum(curTotalProd) == 0 or len(nnProd) < minCropYears:
             shortSeriesExclude.append(countyFips[i])
             fipsSel.append(np.nan)
             exclude = True
@@ -472,7 +459,7 @@ for a, curAreaLimit in enumerate(areaLimit):
             nnSoybean_boot_ind = np.random.choice(np.arange(len(nnSoybean)), len(nnSoybean))
 
             # remove linear intercept from yield time series
-            if len(nnMaize) >= 10:
+            if len(nnMaize) >= minCropYears:
                 X = sm.add_constant(range(len(curMaizeYield[nnMaize])))
                 mdl = sm.OLS(curMaizeYield[nnMaize], X).fit()
                 curMaizeYieldIntercept = mdl.params[0]
@@ -481,7 +468,7 @@ for a, curAreaLimit in enumerate(areaLimit):
                 mdl = sm.OLS(curMaizeYield_Norm[nnMaize], X).fit()
                 curMaizeYieldIntercept_Norm = mdl.params[0]
 
-            if len(nnSoybean) >= 10:
+            if len(nnSoybean) >= minCropYears:
                 X = sm.add_constant(range(len(curSoybeanYield[nnSoybean])))
                 mdl = sm.OLS(curSoybeanYield[nnSoybean], X).fit()
                 curSoybeanYieldIntercept = mdl.params[0]
@@ -605,7 +592,7 @@ for a, curAreaLimit in enumerate(areaLimit):
             
             
             
-            if len(nnMaize) >= 10:
+            if len(nnMaize) >= minCropYears:
                 dataMaize = {'KDD_DetrendAnom_Norm':scipy.signal.detrend(curKdd_Norm[nnMaize]), \
                         'KDD_DetrendAnom':scipy.signal.detrend(curKdd[nnMaize]), \
                         'KDD_DetrendNorm':scipy.signal.detrend(curKdd_Norm[nnMaize])+np.nanmean(curKdd_Norm[nnMaize]), \
@@ -660,7 +647,7 @@ for a, curAreaLimit in enumerate(areaLimit):
                                        'Pr_Detrend', \
                                        'MaizeYield_Detrend'])
 
-            if len(nnSoybean) >= 10:
+            if len(nnSoybean) >= minCropYears:
                 dataSoybean = {'KDD_DetrendAnom_Norm':scipy.signal.detrend(curKdd_Norm[nnSoybean]), \
                         'KDD_DetrendAnom':scipy.signal.detrend(curKdd[nnSoybean]), \
                         'KDD_DetrendNorm':scipy.signal.detrend(curKdd_Norm[nnSoybean])+np.nanmean(curKdd_Norm[nnSoybean]), \
@@ -743,10 +730,14 @@ for a, curAreaLimit in enumerate(areaLimit):
                 prodVar_Norm = 'TotalProd_DetrendAnom_Norm'
 
             if uncertaintyProp:
-                mdl_LH_Y = smf.ols(formula='%s ~ %s + %s + %s + %s'%(lhVar, prodVar, prVar, netRadVar, windVar), \
-                                   data=dfProd_bootstrap).fit()
+                if includeKdd:
+                    mdl_LH_Y = smf.ols(formula='%s ~ %s + %s + %s + %s + %s'%(lhVar, prodVar, prVar, netRadVar, windVar, kddVar), \
+                                       data=dfProd_bootstrap).fit()
+                else:
+                    mdl_LH_Y = smf.ols(formula='%s ~ %s + %s + %s + %s'%(lhVar, prodVar, prVar, netRadVar, windVar), \
+                                       data=dfProd_bootstrap).fit()
             else:
-                mdl_LH_Y = smf.ols(formula='%s ~ %s + %s + %s + %s'%(lhVar, prodVar, prVar, netRadVar, windVar), \
+                mdl_LH_Y = smf.ols(formula='%s ~ %s + %s + %s + %s + %s'%(lhVar, prodVar, prVar, netRadVar, windVar, kddVar), \
                                    data=dfProd).fit()
             
             mdl_LH_Y_Norm = smf.ols(formula='SLHF_DetrendAnom_Norm ~ %s + Pr_DetrendAnom_Norm + NetRad_DetrendAnom_Norm + Wind_DetrendAnom_Norm'%prodVar_Norm, \
@@ -756,17 +747,17 @@ for a, curAreaLimit in enumerate(areaLimit):
                                data=dfProd).fit()
 
             
-            mdl_Param_Corr['Prod-Pr'][i] = np.corrcoef(dfProd[prodVar], dfProd[prVar])[0,1]
-            mdl_Param_Corr['Prod-NetRad'][i] = np.corrcoef(dfProd[prodVar], dfProd[netRadVar])[0,1]
-            mdl_Param_Corr['Prod-Wind'][i] = np.corrcoef(dfProd[prodVar], dfProd[windVar])[0,1]
-            mdl_Param_Corr['Pr-NetRad'][i] = np.corrcoef(dfProd[prVar], dfProd[netRadVar])[0,1]
-            mdl_Param_Corr['Pr-Wind'][i] = np.corrcoef(dfProd[prVar], dfProd[windVar])[0,1]
-            mdl_Param_Corr['NetRad-Wind'][i] = np.corrcoef(dfProd[netRadVar], dfProd[windVar])[0,1]
+            mdl_Param_Corr['Prod-Pr'][i, b] = np.corrcoef(dfProd[prodVar], dfProd[prVar])[0,1]
+            mdl_Param_Corr['Prod-NetRad'][i, b] = np.corrcoef(dfProd[prodVar], dfProd[netRadVar])[0,1]
+            mdl_Param_Corr['Prod-Wind'][i, b] = np.corrcoef(dfProd[prodVar], dfProd[windVar])[0,1]
+            mdl_Param_Corr['Pr-NetRad'][i, b] = np.corrcoef(dfProd[prVar], dfProd[netRadVar])[0,1]
+            mdl_Param_Corr['Pr-Wind'][i, b] = np.corrcoef(dfProd[prVar], dfProd[windVar])[0,1]
+            mdl_Param_Corr['NetRad-Wind'][i, b] = np.corrcoef(dfProd[netRadVar], dfProd[windVar])[0,1]
 
-            mdl_LH_Y_Decomp_Coefs['TotalYield_DetrendAnom'][i] = mdl_LH_Y_Decomp.params['TotalYield_DetrendAnom']
-            mdl_LH_Y_Decomp_Coefs['TotalHA'][i] = mdl_LH_Y_Decomp.params['TotalHA']
-            mdl_LH_Y_Decomp_PValues['TotalYield_DetrendAnom'][i] = mdl_LH_Y_Decomp.pvalues['TotalYield_DetrendAnom']
-            mdl_LH_Y_Decomp_PValues['TotalHA'][i] = mdl_LH_Y_Decomp.pvalues['TotalHA']
+            mdl_LH_Y_Decomp_Coefs['TotalYield_DetrendAnom'][i, b] = mdl_LH_Y_Decomp.params['TotalYield_DetrendAnom']
+            mdl_LH_Y_Decomp_Coefs['TotalHA'][i, b] = mdl_LH_Y_Decomp.params['TotalHA']
+            mdl_LH_Y_Decomp_PValues['TotalYield_DetrendAnom'][i, b] = mdl_LH_Y_Decomp.pvalues['TotalYield_DetrendAnom']
+            mdl_LH_Y_Decomp_PValues['TotalHA'][i, b] = mdl_LH_Y_Decomp.pvalues['TotalHA']
 
             if uncertaintyProp:
                 mdl_LH_SH = smf.ols(formula='%s ~ %s + %s'%(shVar, lhVar, netRadVar), data=dfProd_bootstrap).fit()
@@ -784,14 +775,14 @@ for a, curAreaLimit in enumerate(areaLimit):
             if wxData == 'era5':
                 mdl_SH_T = smf.ols(formula='%s ~ %s'%(tVar, shVar), data=dfProd).fit()
 
-            if len(nnMaize) >= 10:
+            if len(nnMaize) >= minCropYears:
                 if uncertaintyProp:
                     mdl_KDD_GDD_PR_MaizeYield = smf.ols(formula='MaizeYield_Detrend ~ GDD_Detrend + KDD_Detrend + Pr_Detrend', data=dfMaize_bootstrap).fit()
                 else:
                     mdl_KDD_GDD_PR_MaizeYield = smf.ols(formula='MaizeYield_Detrend ~ GDD_Detrend + KDD_Detrend + Pr_Detrend', data=dfMaize).fit()
                 mdl_KDD_GDD_PR_MaizeYield_Norm = smf.ols(formula='MaizeYield_DetrendNorm ~ GDD_DetrendNorm + KDD_DetrendNorm + Pr_DetrendNorm', data=dfMaize).fit()
 
-            if len(nnSoybean) >= 10:
+            if len(nnSoybean) >= minCropYears:
                 if uncertaintyProp:
                     mdl_KDD_GDD_PR_SoybeanYield = smf.ols(formula='SoybeanYield_Detrend ~ GDD_Detrend + KDD_Detrend + Pr_Detrend', data=dfSoybean_bootstrap).fit()
                 else:
@@ -806,87 +797,89 @@ for a, curAreaLimit in enumerate(areaLimit):
             mdl_KDD_GDD_PR_SoybeanYield_CondNum[i, b] = mdl_KDD_GDD_PR_SoybeanYield.condition_number
 
         #     mdl_LH_Y_Coefs['Yield_DetrendAnom'][i] = mdl_LH_Y.params['Yield_DetrendAnom']
-            mdl_LH_Y_Coefs['TotalProd_DetrendAnom'][i] = mdl_LH_Y.params[prodVar]
-            mdl_LH_Y_Coefs['Pr_DetrendAnom'][i] = mdl_LH_Y.params[prVar]
-            mdl_LH_Y_Coefs['NetRad_DetrendAnom'][i] = mdl_LH_Y.params[netRadVar]
-            mdl_LH_Y_Coefs['Wind_DetrendAnom'][i] = mdl_LH_Y.params[windVar]
-            mdl_LH_Y_Coefs['R2'][i] = mdl_LH_Y.rsquared
+            mdl_LH_Y_Coefs['TotalProd_DetrendAnom'][i, b] = mdl_LH_Y.params[prodVar]
+            mdl_LH_Y_Coefs['Pr_DetrendAnom'][i, b] = mdl_LH_Y.params[prVar]
+            mdl_LH_Y_Coefs['NetRad_DetrendAnom'][i, b] = mdl_LH_Y.params[netRadVar]
+            mdl_LH_Y_Coefs['Wind_DetrendAnom'][i, b] = mdl_LH_Y.params[windVar]
+            mdl_LH_Y_Coefs['R2'][i, b] = mdl_LH_Y.rsquared
         #     mdl_LH_Y_PValues['Yield_DetrendAnom'][i] = mdl_LH_Y.pvalues['Yield_DetrendAnom']
-            mdl_LH_Y_PValues['TotalProd_DetrendAnom'][i] = mdl_LH_Y.pvalues[prodVar]
-            mdl_LH_Y_PValues['Pr_DetrendAnom'][i] = mdl_LH_Y.pvalues[prVar]
-            mdl_LH_Y_PValues['NetRad_DetrendAnom'][i] = mdl_LH_Y.pvalues[netRadVar]
-            mdl_LH_Y_PValues['Wind_DetrendAnom'][i] = mdl_LH_Y.pvalues[windVar]
+            mdl_LH_Y_PValues['TotalProd_DetrendAnom'][i, b] = mdl_LH_Y.pvalues[prodVar]
+            mdl_LH_Y_PValues['Pr_DetrendAnom'][i, b] = mdl_LH_Y.pvalues[prVar]
+            mdl_LH_Y_PValues['NetRad_DetrendAnom'][i, b] = mdl_LH_Y.pvalues[netRadVar]
+            mdl_LH_Y_PValues['Wind_DetrendAnom'][i, b] = mdl_LH_Y.pvalues[windVar]
 
         #     mdl_LH_Y_Norm_Coefs['Yield_DetrendAnom_Norm'][i] = mdl_LH_Y_Norm.params['Yield_DetrendAnom_Norm']
-            mdl_LH_Y_Norm_Coefs['TotalProd_DetrendAnom_Norm'][i] = mdl_LH_Y_Norm.params[prodVar_Norm]
-            mdl_LH_Y_Norm_Coefs['Pr_DetrendAnom_Norm'][i] = mdl_LH_Y_Norm.params['Pr_DetrendAnom_Norm']
-            mdl_LH_Y_Norm_Coefs['NetRad_DetrendAnom_Norm'][i] = mdl_LH_Y_Norm.params['NetRad_DetrendAnom_Norm']
-            mdl_LH_Y_Norm_Coefs['Wind_DetrendAnom_Norm'][i] = mdl_LH_Y_Norm.params['Wind_DetrendAnom_Norm']
+            mdl_LH_Y_Norm_Coefs['TotalProd_DetrendAnom_Norm'][i, b] = mdl_LH_Y_Norm.params[prodVar_Norm]
+            mdl_LH_Y_Norm_Coefs['Pr_DetrendAnom_Norm'][i, b] = mdl_LH_Y_Norm.params['Pr_DetrendAnom_Norm']
+            mdl_LH_Y_Norm_Coefs['NetRad_DetrendAnom_Norm'][i, b] = mdl_LH_Y_Norm.params['NetRad_DetrendAnom_Norm']
+            mdl_LH_Y_Norm_Coefs['Wind_DetrendAnom_Norm'][i, b] = mdl_LH_Y_Norm.params['Wind_DetrendAnom_Norm']
         #     mdl_LH_Y_Norm_PValues['Yield_DetrendAnom_Norm'][i] = mdl_LH_Y_Norm.pvalues['Yield_DetrendAnom_Norm']
-            mdl_LH_Y_Norm_PValues['TotalProd_DetrendAnom_Norm'][i] = mdl_LH_Y_Norm.pvalues[prodVar_Norm]
-            mdl_LH_Y_Norm_PValues['Pr_DetrendAnom_Norm'][i] = mdl_LH_Y_Norm.pvalues['Pr_DetrendAnom_Norm']
-            mdl_LH_Y_Norm_PValues['NetRad_DetrendAnom_Norm'][i] = mdl_LH_Y_Norm.pvalues['NetRad_DetrendAnom_Norm']
-            mdl_LH_Y_Norm_PValues['Wind_DetrendAnom_Norm'][i] = mdl_LH_Y_Norm.pvalues['Wind_DetrendAnom_Norm']
+            mdl_LH_Y_Norm_PValues['TotalProd_DetrendAnom_Norm'][i, b] = mdl_LH_Y_Norm.pvalues[prodVar_Norm]
+            mdl_LH_Y_Norm_PValues['Pr_DetrendAnom_Norm'][i, b] = mdl_LH_Y_Norm.pvalues['Pr_DetrendAnom_Norm']
+            mdl_LH_Y_Norm_PValues['NetRad_DetrendAnom_Norm'][i, b] = mdl_LH_Y_Norm.pvalues['NetRad_DetrendAnom_Norm']
+            mdl_LH_Y_Norm_PValues['Wind_DetrendAnom_Norm'][i, b] = mdl_LH_Y_Norm.pvalues['Wind_DetrendAnom_Norm']
 
-            mdl_LH_SH_Coefs['SLHF_DetrendAnom'][i] = mdl_LH_SH.params[lhVar]
-            mdl_LH_SH_Coefs['NetRad_DetrendAnom'][i] = mdl_LH_SH.params[netRadVar]
-            mdl_LH_SH_Coefs['R2'][i] = mdl_LH_SH.rsquared
-            mdl_LH_SH_PValues['SLHF_DetrendAnom'][i] = mdl_LH_SH.pvalues[lhVar]
-            mdl_LH_SH_PValues['NetRad_DetrendAnom'][i] = mdl_LH_SH.pvalues[netRadVar]
+            mdl_LH_SH_Coefs['SLHF_DetrendAnom'][i, b] = mdl_LH_SH.params[lhVar]
+            mdl_LH_SH_Coefs['NetRad_DetrendAnom'][i, b] = mdl_LH_SH.params[netRadVar]
+            mdl_LH_SH_Coefs['R2'][i, b] = mdl_LH_SH.rsquared
+            mdl_LH_SH_PValues['SLHF_DetrendAnom'][i, b] = mdl_LH_SH.pvalues[lhVar]
+            mdl_LH_SH_PValues['NetRad_DetrendAnom'][i, b] = mdl_LH_SH.pvalues[netRadVar]
 
-            mdl_LH_SH_Norm_Coefs['SLHF_DetrendAnom_Norm'][i] = mdl_LH_SH_Norm.params['SLHF_DetrendAnom_Norm']
-            mdl_LH_SH_Norm_Coefs['NetRad_DetrendAnom_Norm'][i] = mdl_LH_SH_Norm.params['NetRad_DetrendAnom_Norm']
-            mdl_LH_SH_Norm_PValues['SLHF_DetrendAnom_Norm'][i] = mdl_LH_SH_Norm.pvalues['SLHF_DetrendAnom_Norm']
-            mdl_LH_SH_Norm_PValues['NetRad_DetrendAnom_Norm'][i] = mdl_LH_SH_Norm.pvalues['NetRad_DetrendAnom_Norm']
+            mdl_LH_SH_Norm_Coefs['SLHF_DetrendAnom_Norm'][i, b] = mdl_LH_SH_Norm.params['SLHF_DetrendAnom_Norm']
+            mdl_LH_SH_Norm_Coefs['NetRad_DetrendAnom_Norm'][i, b] = mdl_LH_SH_Norm.params['NetRad_DetrendAnom_Norm']
+            mdl_LH_SH_Norm_PValues['SLHF_DetrendAnom_Norm'][i, b] = mdl_LH_SH_Norm.pvalues['SLHF_DetrendAnom_Norm']
+            mdl_LH_SH_Norm_PValues['NetRad_DetrendAnom_Norm'][i, b] = mdl_LH_SH_Norm.pvalues['NetRad_DetrendAnom_Norm']
 
-            mdl_SH_KDD_Coefs['SSHF_DetrendAnom'][i] = mdl_SH_KDD.params[shVar]
-            mdl_SH_KDD_Coefs['R2'][i] = mdl_SH_KDD.rsquared
-            mdl_SH_GDD_Coefs['SSHF_DetrendAnom'][i] = mdl_SH_GDD.params[shVar]
-            mdl_SH_GDD_Coefs['R2'][i] = mdl_SH_GDD.rsquared
-            mdl_SH_KDD_PValues['SSHF_DetrendAnom'][i] = mdl_SH_KDD.pvalues[shVar]
-            mdl_SH_GDD_PValues['SSHF_DetrendAnom'][i] = mdl_SH_GDD.pvalues[shVar]
+            mdl_SH_KDD_Coefs['SSHF_DetrendAnom'][i, b] = mdl_SH_KDD.params[shVar]
+            mdl_SH_KDD_Coefs['R2'][i, b] = mdl_SH_KDD.rsquared
+            mdl_SH_GDD_Coefs['SSHF_DetrendAnom'][i, b] = mdl_SH_GDD.params[shVar]
+            mdl_SH_GDD_Coefs['R2'][i, b] = mdl_SH_GDD.rsquared
+            mdl_SH_KDD_PValues['SSHF_DetrendAnom'][i, b] = mdl_SH_KDD.pvalues[shVar]
+            mdl_SH_GDD_PValues['SSHF_DetrendAnom'][i, b] = mdl_SH_GDD.pvalues[shVar]
 
-            mdl_SH_KDD_Norm_Coefs['SSHF_DetrendAnom_Norm'][i] = mdl_SH_KDD_Norm.params['SSHF_DetrendAnom_Norm']
-            mdl_SH_GDD_Norm_Coefs['SSHF_DetrendAnom_Norm'][i] = mdl_SH_GDD_Norm.params['SSHF_DetrendAnom_Norm']
-            mdl_SH_KDD_Norm_PValues['SSHF_DetrendAnom_Norm'][i] = mdl_SH_KDD_Norm.pvalues['SSHF_DetrendAnom_Norm']
-            mdl_SH_GDD_Norm_PValues['SSHF_DetrendAnom_Norm'][i] = mdl_SH_GDD_Norm.pvalues['SSHF_DetrendAnom_Norm']
+            mdl_SH_KDD_Norm_Coefs['SSHF_DetrendAnom_Norm'][i, b] = mdl_SH_KDD_Norm.params['SSHF_DetrendAnom_Norm']
+            mdl_SH_GDD_Norm_Coefs['SSHF_DetrendAnom_Norm'][i, b] = mdl_SH_GDD_Norm.params['SSHF_DetrendAnom_Norm']
+            mdl_SH_KDD_Norm_PValues['SSHF_DetrendAnom_Norm'][i, b] = mdl_SH_KDD_Norm.pvalues['SSHF_DetrendAnom_Norm']
+            mdl_SH_GDD_Norm_PValues['SSHF_DetrendAnom_Norm'][i, b] = mdl_SH_GDD_Norm.pvalues['SSHF_DetrendAnom_Norm']
 
-            if len(nnMaize) >= 10:
-                mdl_KDD_GDD_MaizeYield_Coefs['KDD_Detrend'][i] = mdl_KDD_GDD_PR_MaizeYield.params['KDD_Detrend']
-                mdl_KDD_GDD_MaizeYield_Coefs['GDD_Detrend'][i] = mdl_KDD_GDD_PR_MaizeYield.params['GDD_Detrend']
-                mdl_KDD_GDD_MaizeYield_Coefs['Pr_Detrend'][i] = mdl_KDD_GDD_PR_MaizeYield.params['Pr_Detrend']
-                mdl_KDD_GDD_MaizeYield_Coefs['R2'][i] = mdl_KDD_GDD_PR_MaizeYield.rsquared
-                mdl_KDD_GDD_MaizeYield_PValues['KDD_Detrend'][i] = mdl_KDD_GDD_PR_MaizeYield.pvalues['KDD_Detrend']
-                mdl_KDD_GDD_MaizeYield_PValues['GDD_Detrend'][i] = mdl_KDD_GDD_PR_MaizeYield.pvalues['GDD_Detrend']
-                mdl_KDD_GDD_MaizeYield_PValues['Pr_Detrend'][i] = mdl_KDD_GDD_PR_MaizeYield.pvalues['Pr_Detrend']
+            if len(nnMaize) >= minCropYears:
+                mdl_KDD_GDD_MaizeYield_Coefs['KDD_Detrend'][i, b] = mdl_KDD_GDD_PR_MaizeYield.params['KDD_Detrend']
+                mdl_KDD_GDD_MaizeYield_Coefs['GDD_Detrend'][i, b] = mdl_KDD_GDD_PR_MaizeYield.params['GDD_Detrend']
+                mdl_KDD_GDD_MaizeYield_Coefs['Pr_Detrend'][i, b] = mdl_KDD_GDD_PR_MaizeYield.params['Pr_Detrend']
+                mdl_KDD_GDD_MaizeYield_Coefs['R2'][i, b] = mdl_KDD_GDD_PR_MaizeYield.rsquared
+                mdl_KDD_GDD_MaizeYield_PValues['KDD_Detrend'][i, b] = mdl_KDD_GDD_PR_MaizeYield.pvalues['KDD_Detrend']
+                mdl_KDD_GDD_MaizeYield_PValues['GDD_Detrend'][i, b] = mdl_KDD_GDD_PR_MaizeYield.pvalues['GDD_Detrend']
+                mdl_KDD_GDD_MaizeYield_PValues['Pr_Detrend'][i, b] = mdl_KDD_GDD_PR_MaizeYield.pvalues['Pr_Detrend']
 
-                mdl_KDD_GDD_MaizeYield_Norm_Coefs['KDD_DetrendNorm'][i] = mdl_KDD_GDD_PR_MaizeYield_Norm.params['KDD_DetrendNorm']
-                mdl_KDD_GDD_MaizeYield_Norm_Coefs['GDD_DetrendNorm'][i] = mdl_KDD_GDD_PR_MaizeYield_Norm.params['GDD_DetrendNorm']
-                mdl_KDD_GDD_MaizeYield_Norm_Coefs['Pr_DetrendNorm'][i] = mdl_KDD_GDD_PR_MaizeYield_Norm.params['Pr_DetrendNorm']
-                mdl_KDD_GDD_MaizeYield_Norm_Coefs['R2'][i] = mdl_KDD_GDD_PR_MaizeYield_Norm.rsquared
-                mdl_KDD_GDD_MaizeYield_Norm_PValues['KDD_DetrendNorm'][i] = mdl_KDD_GDD_PR_MaizeYield_Norm.pvalues['KDD_DetrendNorm']
-                mdl_KDD_GDD_MaizeYield_Norm_PValues['GDD_DetrendNorm'][i] = mdl_KDD_GDD_PR_MaizeYield_Norm.pvalues['GDD_DetrendNorm']
-                mdl_KDD_GDD_MaizeYield_Norm_PValues['Pr_DetrendNorm'][i] = mdl_KDD_GDD_PR_MaizeYield_Norm.pvalues['Pr_DetrendNorm']
+                mdl_KDD_GDD_MaizeYield_Norm_Coefs['KDD_DetrendNorm'][i, b] = mdl_KDD_GDD_PR_MaizeYield_Norm.params['KDD_DetrendNorm']
+                mdl_KDD_GDD_MaizeYield_Norm_Coefs['GDD_DetrendNorm'][i, b] = mdl_KDD_GDD_PR_MaizeYield_Norm.params['GDD_DetrendNorm']
+                mdl_KDD_GDD_MaizeYield_Norm_Coefs['Pr_DetrendNorm'][i, b] = mdl_KDD_GDD_PR_MaizeYield_Norm.params['Pr_DetrendNorm']
+                mdl_KDD_GDD_MaizeYield_Norm_Coefs['R2'][i, b] = mdl_KDD_GDD_PR_MaizeYield_Norm.rsquared
+                mdl_KDD_GDD_MaizeYield_Norm_PValues['KDD_DetrendNorm'][i, b] = mdl_KDD_GDD_PR_MaizeYield_Norm.pvalues['KDD_DetrendNorm']
+                mdl_KDD_GDD_MaizeYield_Norm_PValues['GDD_DetrendNorm'][i, b] = mdl_KDD_GDD_PR_MaizeYield_Norm.pvalues['GDD_DetrendNorm']
+                mdl_KDD_GDD_MaizeYield_Norm_PValues['Pr_DetrendNorm'][i, b] = mdl_KDD_GDD_PR_MaizeYield_Norm.pvalues['Pr_DetrendNorm']
 
-            if len(nnSoybean) >= 10:
-                mdl_KDD_GDD_SoybeanYield_Coefs['KDD_Detrend'][i] = mdl_KDD_GDD_PR_SoybeanYield.params['KDD_Detrend']
-                mdl_KDD_GDD_SoybeanYield_Coefs['GDD_Detrend'][i] = mdl_KDD_GDD_PR_SoybeanYield.params['GDD_Detrend']
-                mdl_KDD_GDD_SoybeanYield_Coefs['Pr_Detrend'][i] = mdl_KDD_GDD_PR_SoybeanYield.params['Pr_Detrend']
-                mdl_KDD_GDD_SoybeanYield_Coefs['R2'][i] = mdl_KDD_GDD_PR_SoybeanYield.rsquared
-                mdl_KDD_GDD_SoybeanYield_PValues['KDD_Detrend'][i] = mdl_KDD_GDD_PR_SoybeanYield.pvalues['KDD_Detrend']
-                mdl_KDD_GDD_SoybeanYield_PValues['GDD_Detrend'][i] = mdl_KDD_GDD_PR_SoybeanYield.pvalues['GDD_Detrend']
-                mdl_KDD_GDD_SoybeanYield_PValues['Pr_Detrend'][i] = mdl_KDD_GDD_PR_SoybeanYield.pvalues['Pr_Detrend']
+            if len(nnSoybean) >= minCropYears:
+                mdl_KDD_GDD_SoybeanYield_Coefs['KDD_Detrend'][i, b] = mdl_KDD_GDD_PR_SoybeanYield.params['KDD_Detrend']
+                mdl_KDD_GDD_SoybeanYield_Coefs['GDD_Detrend'][i, b] = mdl_KDD_GDD_PR_SoybeanYield.params['GDD_Detrend']
+                mdl_KDD_GDD_SoybeanYield_Coefs['Pr_Detrend'][i, b] = mdl_KDD_GDD_PR_SoybeanYield.params['Pr_Detrend']
+                mdl_KDD_GDD_SoybeanYield_Coefs['R2'][i, b] = mdl_KDD_GDD_PR_SoybeanYield.rsquared
+                mdl_KDD_GDD_SoybeanYield_PValues['KDD_Detrend'][i, b] = mdl_KDD_GDD_PR_SoybeanYield.pvalues['KDD_Detrend']
+                mdl_KDD_GDD_SoybeanYield_PValues['GDD_Detrend'][i, b] = mdl_KDD_GDD_PR_SoybeanYield.pvalues['GDD_Detrend']
+                mdl_KDD_GDD_SoybeanYield_PValues['Pr_Detrend'][i, b] = mdl_KDD_GDD_PR_SoybeanYield.pvalues['Pr_Detrend']
 
-                mdl_KDD_GDD_SoybeanYield_Norm_Coefs['KDD_DetrendNorm'][i] = mdl_KDD_GDD_PR_SoybeanYield_Norm.params['KDD_DetrendNorm']
-                mdl_KDD_GDD_SoybeanYield_Norm_Coefs['GDD_DetrendNorm'][i] = mdl_KDD_GDD_PR_SoybeanYield_Norm.params['GDD_DetrendNorm']
-                mdl_KDD_GDD_SoybeanYield_Norm_Coefs['Pr_DetrendNorm'][i] = mdl_KDD_GDD_PR_SoybeanYield_Norm.params['Pr_DetrendNorm']
-                mdl_KDD_GDD_SoybeanYield_Norm_Coefs['R2'][i] = mdl_KDD_GDD_PR_SoybeanYield_Norm.rsquared
-                mdl_KDD_GDD_SoybeanYield_Norm_PValues['KDD_DetrendNorm'][i] = mdl_KDD_GDD_PR_SoybeanYield_Norm.pvalues['KDD_DetrendNorm']
-                mdl_KDD_GDD_SoybeanYield_Norm_PValues['GDD_DetrendNorm'][i] = mdl_KDD_GDD_PR_SoybeanYield_Norm.pvalues['GDD_DetrendNorm']
-                mdl_KDD_GDD_SoybeanYield_Norm_PValues['Pr_DetrendNorm'][i] = mdl_KDD_GDD_PR_SoybeanYield_Norm.pvalues['Pr_DetrendNorm']
+                mdl_KDD_GDD_SoybeanYield_Norm_Coefs['KDD_DetrendNorm'][i, b] = mdl_KDD_GDD_PR_SoybeanYield_Norm.params['KDD_DetrendNorm']
+                mdl_KDD_GDD_SoybeanYield_Norm_Coefs['GDD_DetrendNorm'][i, b] = mdl_KDD_GDD_PR_SoybeanYield_Norm.params['GDD_DetrendNorm']
+                mdl_KDD_GDD_SoybeanYield_Norm_Coefs['Pr_DetrendNorm'][i, b] = mdl_KDD_GDD_PR_SoybeanYield_Norm.params['Pr_DetrendNorm']
+                mdl_KDD_GDD_SoybeanYield_Norm_Coefs['R2'][i, b] = mdl_KDD_GDD_PR_SoybeanYield_Norm.rsquared
+                mdl_KDD_GDD_SoybeanYield_Norm_PValues['KDD_DetrendNorm'][i, b] = mdl_KDD_GDD_PR_SoybeanYield_Norm.pvalues['KDD_DetrendNorm']
+                mdl_KDD_GDD_SoybeanYield_Norm_PValues['GDD_DetrendNorm'][i, b] = mdl_KDD_GDD_PR_SoybeanYield_Norm.pvalues['GDD_DetrendNorm']
+                mdl_KDD_GDD_SoybeanYield_Norm_PValues['Pr_DetrendNorm'][i, b] = mdl_KDD_GDD_PR_SoybeanYield_Norm.pvalues['Pr_DetrendNorm']
 
+            sample_x = np.linspace(0.01, 0.99, n_samples)
+                
             # with yield growth and warming - this is just the historical LH trend
-            curLhMod_yieldGrowth = np.matlib.repmat(curSlhf[nnProd], len(sample_x), 1).T
+            curLhMod_yieldGrowth = np.matlib.repmat(curSlhf[nnProd], n_samples, 1).T
             lhMod_yieldGrowth[i, 0:len(curLhMod_yieldGrowth), :, b] = curLhMod_yieldGrowth
             
             # now calculate how much yield variation contributed to latent heat using our regression (above)
@@ -900,15 +893,16 @@ for a, curAreaLimit in enumerate(areaLimit):
             X = {prodVar:dataProd['TotalProd']-curTotalProdIntercept/1e6,
                  prVar:[0]*len(dataProd['TotalProd']),
                  netRadVar:[0]*len(dataProd['TotalProd']),
-                 windVar:[0]*len(dataProd['TotalProd'])}
+                 windVar:[0]*len(dataProd['TotalProd']),
+                 kddVar:[0]*len(dataProd['TotalProd'])}
 
             mdl_LH_Y_TotalProd_sample = mdl_LH_Y.params['TotalProd_DetrendAnom'] + \
                                         st.t.ppf(sample_x, mdl_LH_Y.df_model) * mdl_LH_Y.bse['TotalProd_DetrendAnom']
 
-            lhFromYieldGrowth = np.full([len(X['TotalProd_DetrendAnom']), len(sample_x)], np.nan)
+            lhFromYieldGrowth = np.full([len(X['TotalProd_DetrendAnom']), n_samples], np.nan)
 
             # loop over sampled coordinates
-            for k in range(len(sample_x)):
+            for k in range(n_samples):
                 lhFromYieldGrowth[:, k] = mdl_LH_Y.params['Intercept'] + \
                             mdl_LH_Y_TotalProd_sample[k]*np.array(X['TotalProd_DetrendAnom']) + \
                             mdl_LH_Y.params['Pr_DetrendAnom']*np.array(X['Pr_DetrendAnom']) + \
@@ -917,7 +911,7 @@ for a, curAreaLimit in enumerate(areaLimit):
 
             # the lh without yield growth is just the total lh minus this estimated lh that
             # resulted from yield growth
-            curLhMod_noYieldGrowth = np.matlib.repmat(curSlhf[nnProd], len(sample_x), 1).T - lhFromYieldGrowth
+            curLhMod_noYieldGrowth = np.matlib.repmat(curSlhf[nnProd], n_samples, 1).T - lhFromYieldGrowth
             lhMod_noYieldGrowth[i, 0:len(curLhMod_noYieldGrowth), :, b] = curLhMod_noYieldGrowth
             
 
@@ -930,16 +924,16 @@ for a, curAreaLimit in enumerate(areaLimit):
     #         lhMod_noYieldGrowth[i, 0:len(curLhMod_noYieldGrowth)] = curLhMod_noYieldGrowth
 
             # now do the same for sh
-            curShMod_yieldGrowth = np.matlib.repmat(curSshf[nnProd], len(sample_x), 1).T
+            curShMod_yieldGrowth = np.matlib.repmat(curSshf[nnProd], n_samples, 1).T
             shMod_yieldGrowth[i, 0:len(curShMod_yieldGrowth), :, b] = curShMod_yieldGrowth
 
             # how much did the lh change (from yield) change sh - estimate using the lh produced by yield 
             # from above
             mdl_LH_SH_LH_sample = mdl_LH_SH.params[lhVar] + \
                                         st.t.ppf(sample_x, mdl_LH_SH.df_model) * mdl_LH_SH.bse[lhVar]
-            lh_coef_sample = np.random.choice(len(sample_x), len(sample_x))
-            shFromYieldGrowth = np.full([len(X['TotalProd_DetrendAnom']), len(sample_x)], np.nan)
-            for k in range(len(sample_x)):
+            lh_coef_sample = np.random.choice(n_samples, n_samples)
+            shFromYieldGrowth = np.full([len(X['TotalProd_DetrendAnom']), n_samples], np.nan)
+            for k in range(n_samples):
                 X = {lhVar:lhFromYieldGrowth[:,lh_coef_sample[k]],
                      netRadVar:[0]*lhFromYieldGrowth.shape[0]}
 
@@ -947,7 +941,7 @@ for a, curAreaLimit in enumerate(areaLimit):
                                             mdl_LH_SH_LH_sample[k]*np.array(X[lhVar]) + \
                                             mdl_LH_SH.params[netRadVar]*np.array(X[netRadVar])
 
-            curShMod_noYieldGrowth = np.matlib.repmat(curSshf[nnProd], len(sample_x), 1).T - shFromYieldGrowth
+            curShMod_noYieldGrowth = np.matlib.repmat(curSshf[nnProd], n_samples, 1).T - shFromYieldGrowth
             shMod_noYieldGrowth[i, 0:len(curShMod_noYieldGrowth), :, b] = curShMod_noYieldGrowth
 
 
@@ -956,9 +950,9 @@ for a, curAreaLimit in enumerate(areaLimit):
     #             shMod_noYieldGrowth[i, 0:len(curShMod_noYieldGrowth)] = curShMod_noYieldGrowth
 
             # with yield growth - gdd/kdd are observed values
-            curKddMod_yieldGrowth = np.matlib.repmat(curKdd[nnProd], len(sample_x), 1).T
+            curKddMod_yieldGrowth = np.matlib.repmat(curKdd[nnProd], n_samples, 1).T
             kddMod_yieldGrowth[i, 0:len(curKddMod_yieldGrowth), :, b] = curKddMod_yieldGrowth
-            curGddMod_yieldGrowth = np.matlib.repmat(curGdd[nnProd], len(sample_x), 1).T
+            curGddMod_yieldGrowth = np.matlib.repmat(curGdd[nnProd], n_samples, 1).T
             gddMod_yieldGrowth[i, 0:len(curGddMod_yieldGrowth), :, b] = curGddMod_yieldGrowth
 
 
@@ -968,11 +962,11 @@ for a, curAreaLimit in enumerate(areaLimit):
                                         st.t.ppf(sample_x, mdl_SH_KDD.df_model) * mdl_SH_KDD.bse[shVar]
             mdl_SH_GDD_SH_sample = mdl_SH_GDD.params[shVar] + \
                                         st.t.ppf(sample_x, mdl_SH_GDD.df_model) * mdl_SH_GDD.bse[shVar]
-            sh_coef_sample = np.random.choice(len(sample_x), len(sample_x))
-            kddFromYieldGrowth = np.full([len(X[lhVar]), len(sample_x)], np.nan)
-            gddFromYieldGrowth = np.full([len(X[lhVar]), len(sample_x)], np.nan)
+            sh_coef_sample = np.random.choice(n_samples, n_samples)
+            kddFromYieldGrowth = np.full([len(X[lhVar]), n_samples], np.nan)
+            gddFromYieldGrowth = np.full([len(X[lhVar]), n_samples], np.nan)
 
-            for k in range(len(sample_x)):
+            for k in range(n_samples):
                 X = {shVar:shFromYieldGrowth[:, sh_coef_sample[k]]}
 
                 kddFromYieldGrowth[:, k] = mdl_SH_KDD.params['Intercept'] + \
@@ -980,10 +974,10 @@ for a, curAreaLimit in enumerate(areaLimit):
                 gddFromYieldGrowth[:, k] = mdl_SH_GDD.params['Intercept'] + \
                                             mdl_SH_GDD_SH_sample[k]*np.array(X[shVar])
 
-            curKddMod_noYieldGrowth = np.matlib.repmat(curKdd[nnProd], len(sample_x), 1).T - kddFromYieldGrowth
+            curKddMod_noYieldGrowth = np.matlib.repmat(curKdd[nnProd], n_samples, 1).T - kddFromYieldGrowth
             kddMod_noYieldGrowth[i, 0:len(curKddMod_noYieldGrowth), :, b] = curKddMod_noYieldGrowth
 
-            curGddMod_noYieldGrowth = np.matlib.repmat(curGdd[nnProd], len(sample_x), 1).T - gddFromYieldGrowth
+            curGddMod_noYieldGrowth = np.matlib.repmat(curGdd[nnProd], n_samples, 1).T - gddFromYieldGrowth
             gddMod_noYieldGrowth[i, 0:len(curGddMod_noYieldGrowth), :, b] = curGddMod_noYieldGrowth
 
 
@@ -996,23 +990,23 @@ for a, curAreaLimit in enumerate(areaLimit):
     #             gddMod_noYieldGrowth[i, 0:len(curGddMod_noYieldGrowth)] = curGddMod_noYieldGrowth
 
             if wxData == 'era5':
-                tFromYieldGrowth = np.full([len(X[shVar]), len(sample_x)], np.nan)
-                curTMod_yieldGrowth = np.matlib.repmat(curT[nnProd], len(sample_x), 1).T
+                tFromYieldGrowth = np.full([len(X[shVar]), n_samples], np.nan)
+                curTMod_yieldGrowth = np.matlib.repmat(curT[nnProd], n_samples, 1).T
                 tMod_yieldGrowth[i, 0:len(curTMod_yieldGrowth), :, b] = curTMod_yieldGrowth
 
                 mdl_SH_T_SH_sample = mdl_SH_T.params[shVar] + \
                                         st.t.ppf(sample_x, mdl_SH_T.df_model) * mdl_SH_T.bse[shVar]
 
-                for k in range(len(sample_x)):
+                for k in range(n_samples):
                     X = {shVar:shFromYieldGrowth[:, sh_coef_sample[k]]}
                     tFromYieldGrowth[:, k] = mdl_SH_T.params['Intercept'] + \
                                         mdl_SH_T_SH_sample[k]*np.array(X[shVar])
 
-                curTMod_noYieldGrowth = np.matlib.repmat(curT[nnProd], len(sample_x), 1).T - tFromYieldGrowth
+                curTMod_noYieldGrowth = np.matlib.repmat(curT[nnProd], n_samples, 1).T - tFromYieldGrowth
 
 
             # MAIZE ---------------------------------------------------
-            if len(nnMaize) >= 10:
+            if len(nnMaize) >= minCropYears:
 
                 mdl_KDD_GDD_PR_MaizeYield_KDD_sample = mdl_KDD_GDD_PR_MaizeYield.params['KDD_Detrend'] + \
                                         st.t.ppf(sample_x, mdl_KDD_GDD_PR_MaizeYield.df_model) * mdl_KDD_GDD_PR_MaizeYield.bse['KDD_Detrend']
@@ -1021,17 +1015,17 @@ for a, curAreaLimit in enumerate(areaLimit):
                 mdl_KDD_GDD_PR_MaizeYield_Pr_sample = mdl_KDD_GDD_PR_MaizeYield.params['Pr_Detrend'] + \
                                         st.t.ppf(sample_x, mdl_KDD_GDD_PR_MaizeYield.df_model) * mdl_KDD_GDD_PR_MaizeYield.bse['Pr_Detrend']
 
-                gdd_coef_sample = np.random.choice(len(sample_x), len(sample_x))
-                kdd_coef_sample = np.random.choice(len(sample_x), len(sample_x))
-                pr_coef_sample = np.random.choice(len(sample_x), len(sample_x))
+                gdd_coef_sample = np.random.choice(n_samples, n_samples)
+                kdd_coef_sample = np.random.choice(n_samples, n_samples)
+                pr_coef_sample = np.random.choice(n_samples, n_samples)
 
-                gdd_data_sample = np.random.choice(len(sample_x), len(sample_x))
-                kdd_data_sample = np.random.choice(len(sample_x), len(sample_x))
+                gdd_data_sample = np.random.choice(n_samples, n_samples)
+                kdd_data_sample = np.random.choice(n_samples, n_samples)
 
-                curMaizeYieldMod_yieldGrowth = np.full([len(X[shVar]), len(sample_x)], np.nan)
-                curMaizeYieldMod_noYieldGrowth = np.full([len(X[shVar]), len(sample_x)], np.nan)
+                curMaizeYieldMod_yieldGrowth = np.full([len(X[shVar]), n_samples], np.nan)
+                curMaizeYieldMod_noYieldGrowth = np.full([len(X[shVar]), n_samples], np.nan)
 
-                for k in range(len(sample_x)):
+                for k in range(n_samples):
                     # and now calculate yield using gdd/kdd/pr
                     X = {'GDD_Detrend':curGddMod_yieldGrowth[:, gdd_data_sample[k]],
                          'KDD_Detrend':curKddMod_yieldGrowth[:, kdd_data_sample[k]], 
@@ -1064,7 +1058,7 @@ for a, curAreaLimit in enumerate(areaLimit):
     #             maizeYieldMod_noYieldGrowth[i, 0:len(curMaizeYieldMod_noYieldGrowth)] = curMaizeYieldMod_noYieldGrowth
 
             # SOYBEAN ---------------------------------------------------
-            if len(nnSoybean) >= 10:
+            if len(nnSoybean) >= minCropYears:
 
                 mdl_KDD_GDD_PR_SoybeanYield_KDD_sample = mdl_KDD_GDD_PR_SoybeanYield.params['KDD_Detrend'] + \
                                         st.t.ppf(sample_x, mdl_KDD_GDD_PR_SoybeanYield.df_model) * mdl_KDD_GDD_PR_SoybeanYield.bse['KDD_Detrend']
@@ -1073,17 +1067,17 @@ for a, curAreaLimit in enumerate(areaLimit):
                 mdl_KDD_GDD_PR_SoybeanYield_Pr_sample = mdl_KDD_GDD_PR_SoybeanYield.params['Pr_Detrend'] + \
                                         st.t.ppf(sample_x, mdl_KDD_GDD_PR_SoybeanYield.df_model) * mdl_KDD_GDD_PR_SoybeanYield.bse['Pr_Detrend']
 
-                gdd_coef_sample = np.random.choice(len(sample_x), len(sample_x))
-                kdd_coef_sample = np.random.choice(len(sample_x), len(sample_x))
-                pr_coef_sample = np.random.choice(len(sample_x), len(sample_x))
+                gdd_coef_sample = np.random.choice(n_samples, n_samples)
+                kdd_coef_sample = np.random.choice(n_samples, n_samples)
+                pr_coef_sample = np.random.choice(n_samples, n_samples)
 
-                gdd_data_sample = np.random.choice(len(sample_x), len(sample_x))
-                kdd_data_sample = np.random.choice(len(sample_x), len(sample_x))
+                gdd_data_sample = np.random.choice(n_samples, n_samples)
+                kdd_data_sample = np.random.choice(n_samples, n_samples)
 
-                curSoybeanYieldMod_yieldGrowth = np.full([len(X['GDD_Detrend']), len(sample_x)], np.nan)
-                curSoybeanYieldMod_noYieldGrowth = np.full([len(X['GDD_Detrend']), len(sample_x)], np.nan)
+                curSoybeanYieldMod_yieldGrowth = np.full([len(X['GDD_Detrend']), n_samples], np.nan)
+                curSoybeanYieldMod_noYieldGrowth = np.full([len(X['GDD_Detrend']), n_samples], np.nan)
 
-                for k in range(len(sample_x)):
+                for k in range(n_samples):
                     # and now calculate yield using gdd/kdd/pr
                     X = {'GDD_Detrend':curGddMod_yieldGrowth[:, gdd_data_sample[k]],
                          'KDD_Detrend':curKddMod_yieldGrowth[:, kdd_data_sample[k]], 
@@ -1130,7 +1124,7 @@ for a, curAreaLimit in enumerate(areaLimit):
             mdl = sm.OLS(curSshf, X).fit()
             curSshfTrend = mdl.params[1]*10#mdl.params[0]+np.arange(0, NYears)*mdl.params[1]
 
-            for k in range(len(sample_x)):
+            for k in range(n_samples):
                 X = sm.add_constant(range(len(curShMod_yieldGrowth[:, k])))
                 mdl = sm.OLS(curShMod_yieldGrowth[:, k], X).fit()
                 shModTrend_yieldGrowth[i, k, b] = mdl.params[1]*10#mdl.params[0]+np.arange(0, NYears)*mdl.params[1]
@@ -1152,7 +1146,7 @@ for a, curAreaLimit in enumerate(areaLimit):
             mdl = sm.OLS(curSlhf, X).fit()
             curSlhfTrend = mdl.params[1]*10#mdl.params[0]+np.arange(0, NYears)*mdl.params[1]
 
-            for k in range(len(sample_x)):
+            for k in range(n_samples):
                 X = sm.add_constant(range(len(curLhMod_yieldGrowth[:, k])))
                 mdl = sm.OLS(curLhMod_yieldGrowth[:, k], X).fit()
                 lhModTrend_yieldGrowth[i, k, b] = mdl.params[1]*10#mdl.params[0]+np.arange(0, NYears)*mdl.params[1]
@@ -1176,7 +1170,7 @@ for a, curAreaLimit in enumerate(areaLimit):
                 mdl = sm.OLS(curT, X).fit()
                 curTTrend = mdl.params[1]*10#mdl.params[0]+np.arange(0, NYears)*mdl.params[1]
 
-                for k in range(len(sample_x)):
+                for k in range(n_samples):
                     X = sm.add_constant(range(len(curTMod_yieldGrowth[:, k])))
                     mdl = sm.OLS(curTMod_yieldGrowth[:, k], X).fit()
                     tModTrend_yieldGrowth[i, k, b] = mdl.params[1]*10#mdl.params[0]+np.arange(0, NYears)*mdl.params[1]
@@ -1194,7 +1188,7 @@ for a, curAreaLimit in enumerate(areaLimit):
             mdl = sm.OLS(curKdd, X).fit()
             curKddTrend = mdl.params[1]*10#mdl.params[0]+np.arange(0, NYears)*mdl.params[1]
 
-            for k in range(len(sample_x)):
+            for k in range(n_samples):
                 X = sm.add_constant(range(len(curKddMod_yieldGrowth[:, k])))
                 mdl = sm.OLS(curKddMod_yieldGrowth[:, k], X).fit()
                 kddModTrend_yieldGrowth[i, k, b] = mdl.params[1]*10#mdl.params[0]+np.arange(0, NYears)*mdl.params[1]
@@ -1215,7 +1209,7 @@ for a, curAreaLimit in enumerate(areaLimit):
             mdl = sm.OLS(curGdd, X).fit()
             curGddTrend = mdl.params[1]*10#mdl.params[0]+np.arange(0, NYears)*mdl.params[1]
 
-            for k in range(len(sample_x)):
+            for k in range(n_samples):
                 X = sm.add_constant(range(len(curGddMod_yieldGrowth[:, k])))
                 mdl = sm.OLS(curGddMod_yieldGrowth[:, k], X).fit()
                 gddModTrend_yieldGrowth[i, k, b] = mdl.params[1]*10#mdl.params[0]+np.arange(0, NYears)*mdl.params[1]
@@ -1238,7 +1232,7 @@ for a, curAreaLimit in enumerate(areaLimit):
                 mdl = sm.OLS(curMaizeYield[nnMaize], X).fit()
                 curMaizeYieldTrend = mdl.params[1]*10#mdl.params[0]+np.arange(0, NYears)*mdl.params[1]
 
-                for k in range(len(sample_x)):
+                for k in range(n_samples):
                     X = sm.add_constant(range(len(curMaizeYieldMod_yieldGrowth[:, k])))
                     mdl = sm.OLS(curMaizeYieldMod_yieldGrowth[:, k], X).fit()
                     maizeYieldModTrend_yieldGrowth[i, k, b] = mdl.params[1]*10#mdl.params[0]+np.arange(0, NYears)*mdl.params[1]
@@ -1260,7 +1254,7 @@ for a, curAreaLimit in enumerate(areaLimit):
                 mdl = sm.OLS(curSoybeanYield[nnSoybean], X).fit()
                 curSoybeanYieldTrend = mdl.params[1]*10#mdl.params[0]+np.arange(0, NYears)*mdl.params[1]
 
-                for k in range(len(sample_x)):
+                for k in range(n_samples):
                     X = sm.add_constant(range(len(curSoybeanYieldMod_yieldGrowth[:, k])))
                     mdl = sm.OLS(curSoybeanYieldMod_yieldGrowth[:, k], X).fit()
                     soybeanYieldModTrend_yieldGrowth[i, k, b] = mdl.params[1]*10#mdl.params[0]+np.arange(0, NYears)*mdl.params[1]
@@ -1297,6 +1291,7 @@ for a, curAreaLimit in enumerate(areaLimit):
 
 ccFeedbackAnalysis = {
 
+    'fipsAll':fipsAll,
     'fipsSel':fipsSel,
     'haExclude':haExclude,
     'irSel':irSel,
@@ -1338,20 +1333,38 @@ ccFeedbackAnalysis = {
     'mdl_LH_Y_Coefs':mdl_LH_Y_Coefs,
     'mdl_LH_Y_PValues':mdl_LH_Y_PValues,
     
+    'mdl_LH_Y_Norm_Coefs':mdl_LH_Y_Norm_Coefs,
+    'mdl_LH_Y_Norm_PValues':mdl_LH_Y_Norm_PValues,
+    
     'mdl_LH_SH_Coefs':mdl_LH_SH_Coefs,
     'mdl_LH_SH_PValues':mdl_LH_SH_PValues,
+    
+    'mdl_LH_SH_Norm_Coefs':mdl_LH_SH_Norm_Coefs,
+    'mdl_LH_SH_Norm_PValues':mdl_LH_SH_Norm_PValues,
     
     'mdl_SH_KDD_Coefs':mdl_SH_KDD_Coefs,
     'mdl_SH_KDD_PValues':mdl_SH_KDD_PValues,
     
+    'mdl_SH_KDD_Norm_Coefs':mdl_SH_KDD_Norm_Coefs,
+    'mdl_SH_KDD_Norm_PValues':mdl_SH_KDD_Norm_PValues,
+    
     'mdl_SH_GDD_Coefs':mdl_SH_GDD_Coefs,
     'mdl_SH_GDD_PValues':mdl_SH_GDD_PValues,
+    
+    'mdl_SH_GDD_Norm_Coefs':mdl_SH_GDD_Norm_Coefs,
+    'mdl_SH_GDD_Norm_PValues':mdl_SH_GDD_Norm_PValues,
     
     'mdl_KDD_GDD_MaizeYield_Coefs':mdl_KDD_GDD_MaizeYield_Coefs,
     'mdl_KDD_GDD_MaizeYield_PValues':mdl_KDD_GDD_MaizeYield_PValues,
     
+    'mdl_KDD_GDD_MaizeYield_Norm_Coefs':mdl_KDD_GDD_MaizeYield_Norm_Coefs,
+    'mdl_KDD_GDD_MaizeYield_Norm_PValues':mdl_KDD_GDD_MaizeYield_Norm_PValues,
+    
     'mdl_KDD_GDD_SoybeanYield_Coefs':mdl_KDD_GDD_SoybeanYield_Coefs,
     'mdl_KDD_GDD_SoybeanYield_PValues':mdl_KDD_GDD_SoybeanYield_PValues,
+    
+    'mdl_KDD_GDD_SoybeanYield_Norm_Coefs':mdl_KDD_GDD_SoybeanYield_Norm_Coefs,
+    'mdl_KDD_GDD_SoybeanYield_Norm_PValues':mdl_KDD_GDD_SoybeanYield_Norm_PValues,
     
     'mdl_LH_Y_CondNum':mdl_LH_Y_CondNum,
     'mdl_LH_SH_CondNum':mdl_LH_SH_CondNum,
@@ -1362,5 +1375,9 @@ ccFeedbackAnalysis = {
     
 }
 
-with gzip.open('cc-feedback-analysis-%d-%d.dat'%(n_bootstraps, n_samples), 'wb') as f:
-    pickle.dump(ccFeedbackAnalysis, f)
+if includeKdd:
+    with gzip.open('cc-feedback-analysis-%d-%d-kdd.dat'%(n_bootstraps, n_samples), 'wb') as f:
+        pickle.dump(ccFeedbackAnalysis, f)
+else:
+    with gzip.open('cc-feedback-analysis-%d-%d-new.dat'%(n_bootstraps, n_samples), 'wb') as f:
+        pickle.dump(ccFeedbackAnalysis, f)
