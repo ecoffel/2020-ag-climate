@@ -13,7 +13,7 @@ def buildElevationMap(latPixels=360, lonPixels=720):
     import sys
     import pickle
 
-    dataDir = '/dartfs-hpc/rc/lab/C/CMIG/ecoffel/data/elevation'
+    dataDir = '/home/edcoffel/drive/MAX-Filer/Research/Climate-01/Personal-F20/edcoffel-F20/data/elevation'
 
     files = glob.glob('%s/*.tif'%dataDir)
 
